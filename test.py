@@ -103,10 +103,17 @@ def display_image(file_path):
         return
 
     # Display the image
-    cv2.imshow("imagetaken", image)
+    cv2.imshow("PICTURE", image)
 
     # Wait for a key press and close the window
     cv2.waitKey(0)
+    close_window = False
+    while not close_window:
+        if cv2.getWindowProperty("PICTURE", cv2.WND_PROP_VISIBLE) < 1:
+            break
+        query = speechrecognition().lower()
+        if "close" in query:
+            close_window = True
     cv2.destroyAllWindows()
 
 
@@ -138,7 +145,9 @@ def take_picture():
     cap.release()
     display_image(save_path)
 
-    print("Picture taken and saved as yourface.jpg and stored in camera roll")
+    Speak(
+        "Picture taken and saved as yourface.jpg and stored in camera roll. By the way , you look very  handsome today"
+    )
 
 
 def greet_user():
@@ -178,17 +187,10 @@ def execution(query):
             write_to_notepad(content_to_write)
             print("done")
             exit()
-
-    elif "camera" in Query:
-        Speak("Sure sir, opening camera")
-        sp.run("start microsoft.windows.camera:", shell=True)
-    # elif "notepad" in Query:
-    #     Speak("Sure sir, opening notepad")
-
-    #     sp.Popen(["notepad.exe"])
     elif "take a picture" in Query:
-        Speak("sure sir.")
-        take_picture()
+        Speak("sure sir. Make sure to put on a big smile ")
+        t = threading.Thread(target=take_picture)
+        t.start()
 
     elif "cmd" in Query:
         Speak("Sure sir, opening command prompt")
