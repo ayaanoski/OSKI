@@ -22,6 +22,9 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 import pyautogui
 from PIL import Image
 import psutil
+import pyperclip
+from mouse import run_gesture_controller
+from key import mainkey
 
 API_KEY = "AIzaSyBKU7o_xaRSHmYG7x5oWVz1GtnsOwU1sJ0"
 # mainclapexe()
@@ -320,41 +323,110 @@ def get_current_date_time():
     return current_date_time
 
 
-def write_to_notepad(query):
+def listen_for_command():
+    recognizer = sr.Recognizer()
+
+    with sr.Microphone() as source:
+        print("Listening for a command...")
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source, timeout=10)
+
+    try:
+        command = recognizer.recognize_google(audio).lower()
+        print("You said:", command)
+        return command
+    except sr.UnknownValueError:
+        print("Sorry, could not understand the audio.")
+        return None
+    except sr.RequestError as e:
+        print(f"Could not request results from Google Speech Recognition service; {e}")
+        return None
+
+
+def listen_for_content(timeout=5):
+    recognizer = sr.Recognizer()
+
+    with sr.Microphone() as source:
+        print("Listening for content...")
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source, timeout=timeout)
+
+    try:
+        content = recognizer.recognize_google(audio).lower()
+        print("You are writing:", content)
+        return content
+    except sr.UnknownValueError:
+        print("No speech detected.")
+        return None
+    except sr.RequestError as e:
+        print(f"Could not request results from Google Speech Recognition service; {e}")
+        return None
+
+
+def close_notepad_window():
+    try:
+        # Simulate Alt + F4 keyboard shortcut to close the active window
+        pyautogui.hotkey("alt", "f4")
+    except Exception as e:
+        print(f"Error closing Notepad window: {e}")
+
+
+def write_and_close_notepad(content):
     notepad_path = r"C:\Windows\System32\notepad.exe"
-    sp.Popen([notepad_path, "ass.txt"])
+    process = sr.open([notepad_path, "text.txt"])
 
     with open("text.txt", "w") as file:
-        file.write(query)
+        file.write(content)
+
+    time.sleep(1)  # Give some time for Notepad to open and update
+
+    pyperclip.copy(content)  # Copy the content to clipboard
+
+    close_notepad_window()  # Close the Notepad window
+
+    print("Content written to Notepad and copied to clipboard.")
+
+
+def notepad():
+    while True:
+        command = listen_for_command()
+
+        if command == "start writing":
+            print("What would you like to write?")
+            content_to_write = listen_for_content(timeout=5)
+
+            if content_to_write:
+                write_and_close_notepad(content_to_write)
+        elif command == "exit":
+            break
 
 
 current_date_time = get_current_date_time()
 
 
-def display_image(file_path):
+def display_image(file_path, main_speech_recognition):
     # Read the image from the file
-    image = cv2.imread(file_path)
+    image = Image.open(file_path)
+    image.show()
 
-    if image is None:
-        print(f"Error: Could not read the image from {file_path}")
-        return
-
-    # Display the image
-    cv2.imshow("PICTURE", image)
-
-    # Wait for a key press and close the window
-    cv2.waitKey(0)
-    close_window = False
-    while not close_window:
-        if cv2.getWindowProperty("PICTURE", cv2.WND_PROP_VISIBLE) < 1:
-            break
-        query = speechrecognition().lower()
+    # Check for the "close" command continuously
+    while True:
+        query = main_speech_recognition().lower()
         if "close" in query:
-            close_window = True
-    cv2.destroyAllWindows()
+            process_name = (
+                "PhotosApp.exe"  # Adjust the process name based on your system
+            )
+            for process in psutil.process_iter(["pid", "name"]):
+                if process.info["name"] == process_name:
+                    pid = process.info["pid"]
+                    os.system(f"taskkill /f /pid {pid}")
+                    Speak(
+                        "Picture taken and saved as yourface.jpg and stored in camera roll. By the way, you look very handsome today"
+                    )
+                    break
 
 
-def take_picture():
+def take_picture(main_speech_recognition):
     # Open the camera
     cap = cv2.VideoCapture(0)  # 0 indicates the default camera
 
@@ -380,11 +452,17 @@ def take_picture():
 
     # Release the camera
     cap.release()
-    display_image(save_path)
+
+    # Display the image with the main speech recognition function
+    display_image(save_path, main_speech_recognition)
 
     Speak(
-        "Picture taken and saved as yourface.jpg and stored in camera roll. By the way , you look very  handsome today"
+        "Picture taken and saved as yourface.jpg and stored in camera roll. By the way, you look very handsome today"
     )
+
+
+# Example usage
+# take_picture(speechrecognition)
 
 
 def recognize_faces():
@@ -474,6 +552,67 @@ def recognize_faces():
 # recognize_faces()
 
 
+def record_screen_with_voice_commands(output_path, fps=60):
+    def start_recording():
+        nonlocal recording
+        recording = True
+        recording_thread = threading.Thread(
+            target=record_screen_thread, args=(output_path, fps)
+        )
+        recording_thread.start()
+
+    def stop_recording():
+        nonlocal recording
+        recording = False
+
+    def record_screen_thread(output_path, fps):
+        screen_width, screen_height = pyautogui.size()
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(output_path, fourcc, fps, (screen_width, screen_height))
+
+        while recording:
+            frame = pyautogui.screenshot()
+            frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
+            out.write(frame)
+
+        out.release()
+
+    recording = False
+
+    recognizer = sr.Recognizer()
+
+    while True:
+        with sr.Microphone() as source:
+            print("Listening for commands...")
+            recognizer.adjust_for_ambient_noise(source)
+            audio = recognizer.listen(source)
+
+        try:
+            command = recognizer.recognize_google(audio).lower()
+            print(f"Command: {command}")
+
+            if "start recording" in command:
+                start_recording()
+                Speak("Recording started.")
+            elif "stop recording" in command:
+                stop_recording()
+                Speak("Recording stopped.")
+
+                break
+
+        except sr.UnknownValueError:
+            print("Could not understand audio. Please try again.")
+        except sr.RequestError as e:
+            print(f"Speech recognition request failed: {e}")
+
+        time.sleep(1)  # Add a delay to avoid high CPU usage
+
+
+# Example usage
+output_path = "screen_recording.mp4"
+# record_screen_with_voice_commands(output_path, fps=60)
+
+
 def greet_user():
     """Greets the user according to the time"""
 
@@ -506,12 +645,21 @@ def execution(query):
         )  # Adjust this path accordingly
 
         Speak("opening VLC")
+    elif "mouse control" in Query:
+        Speak("you now have full control over your mouse")
+        run_gesture_controller()
+    elif "keyboard control" in Query:
+        Speak("you now have full control over your keyboard")
+        mainkey()
     elif (
         "adjust the volume" in Query
         or "increase the volume" in Query
         or "decrease the volume" in Query
     ):
         adjust_volume_by_voice()
+    elif "screen recording" in Query:
+        Speak("ok sir , tell me when to start and when to stop.")
+        record_screen_with_voice_commands(output_path, fps=60)
     elif "object detection" in Query:
         Speak("sure sir , opening object detection, i might me inaccurate sir.")
         object_detection()
@@ -522,16 +670,11 @@ def execution(query):
         time = datetime.now().strftime("%H:%M")
         Speak(f"It's {time} sir")
     elif "start writing" in Query:
-        print("What would you like to write?")
-        content_to_write = speechrecognition()
-        if content_to_write:
-            write_to_notepad(content_to_write)
-            print("done")
-            exit()
+        notepad()
+
     elif "take a picture" in Query:
         Speak("sure sir. Make sure to put on a big smile ")
-        t = threading.Thread(target=take_picture)
-        t.start()
+        take_picture(speechrecognition)
 
     elif "cmd" in Query:
         Speak("Sure sir, opening command prompt")
