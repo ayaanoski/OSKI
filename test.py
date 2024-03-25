@@ -4,9 +4,8 @@ import datetime
 import os
 import subprocess as sp
 import openai
+
 import pywhatkit as kit
-import requests
-import random
 import time
 from datetime import datetime
 import threading
@@ -14,7 +13,6 @@ from googleapiclient.discovery import build
 import webbrowser
 import cv2
 import face_recognition
-import sys
 import numpy as np
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
@@ -23,13 +21,14 @@ import pyautogui
 from PIL import Image
 import psutil
 import pyperclip
-from mouse import run_gesture_controller
-from key import mainkey
+
+# from mouse import run_gesture_controller
+# from key import mainkey
 
 API_KEY = "AIzaSyBKU7o_xaRSHmYG7x5oWVz1GtnsOwU1sJ0"
 # mainclapexe()
 
-USERNAME = "AYAAN"
+USERNAME = "JUDGES"
 BOTNAME = "OSKEE"
 openai.api_key = "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"
 
@@ -37,25 +36,43 @@ openai.api_key = "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"
 def Speak(text):
     engine = pyttsx3.init()
     voices = engine.getProperty("voices")
-    id = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_DAVID_11.0"
+    id = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0"
     engine.setProperty("voice", id)
     engine.say(text=text)
     engine.runAndWait()
+
+
+import speech_recognition as sr
 
 
 def speechrecognition():
     r = sr.Recognizer()
     with sr.Microphone() as source:
         print("Say something...")
-        r.pause_threshold = 1
+
+        # Adjust for ambient noise before capturing audio
         r.adjust_for_ambient_noise(source)
+
+        # Set the pause threshold to 1 second
+        r.pause_threshold = 1
+
+        # Capture the audio input
         audio = r.listen(source)
+
     try:
         query = r.recognize_google(audio)
         print(f"You said: {query}")
         return query
-    except:
+    except sr.UnknownValueError:
+        print("Sorry, could not understand audio.")
         return ""
+    except sr.RequestError as e:
+        print(f"Could not request results; {e}")
+        return ""
+
+
+# Call the function
+# speechrecognition()
 
 
 def object_detection():
@@ -211,7 +228,9 @@ def parse_volume_command(command):
         print("Invalid numeric value in the command.")
 
 
+# main volume func
 def adjust_volume_by_voice():
+
     recognizer = sr.Recognizer()
 
     with sr.Microphone() as source:
@@ -256,6 +275,7 @@ def close_image_viewer(file_path):
         print(f"Error closing image viewer: {e}")
 
 
+# main screenshot function
 def take_screenshot(file_path="C:\\Users\\asus\\Pictures\\Screenshots\\screenshot.jpg"):
     # Capture screenshot
     screenshot = pyautogui.screenshot()
@@ -387,6 +407,7 @@ def write_and_close_notepad(content):
     print("Content written to Notepad and copied to clipboard.")
 
 
+# main notepad automation function
 def notepad():
     while True:
         command = listen_for_command()
@@ -426,6 +447,7 @@ def display_image(file_path, main_speech_recognition):
                     break
 
 
+# main camera picture fucntion
 def take_picture(main_speech_recognition):
     # Open the camera
     cap = cv2.VideoCapture(0)  # 0 indicates the default camera
@@ -461,95 +483,88 @@ def take_picture(main_speech_recognition):
     )
 
 
-# Example usage
-# take_picture(speechrecognition)
+# def recognize_faces():
+#     Speak("please be in front of the camera sir ")
+#     known_people = {
+#         "Ayaan": face_recognition.face_encodings(
+#             face_recognition.load_image_file(
+#                 "C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg"
+#             )
+#         )[0],
+#         "nikhil": face_recognition.face_encodings(
+#             face_recognition.load_image_file(
+#                 "C:\\Users\\asus\\Desktop\\OSKI\\images\\pho2.jpg"
+#             )
+#         )[0],
+#         # Add more people as needed
+#     }
 
+#     video_capture = cv2.VideoCapture(0)
+#     cv2.namedWindow("Video", cv2.WINDOW_NORMAL)
+#     cv2.resizeWindow("Video", 800, 600)
+#     speech_engine = pyttsx3.init()
 
-def recognize_faces():
-    Speak("please be in front of the camera sir ")
-    known_people = {
-        "Ayaan": face_recognition.face_encodings(
-            face_recognition.load_image_file(
-                "C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg"
-            )
-        )[0],
-        "nikhil": face_recognition.face_encodings(
-            face_recognition.load_image_file(
-                "C:\\Users\\asus\\Desktop\\OSKI\\images\\pho2.jpg"
-            )
-        )[0],
-        # Add more people as needed
-    }
+#     while True:
+#         # Capture each frame
+#         _, frame = video_capture.read()
 
-    video_capture = cv2.VideoCapture(0)
-    cv2.namedWindow("Video", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Video", 800, 600)
-    speech_engine = pyttsx3.init()
+#         # Find all face locations and face encodings in the current frame
+#         face_locations = face_recognition.face_locations(frame)
+#         face_encodings = face_recognition.face_encodings(frame, face_locations)
 
-    while True:
-        # Capture each frame
-        _, frame = video_capture.read()
+#         # Loop through each face found in the frame
+#         for (top, right, bottom, left), face_encoding in zip(
+#             face_locations, face_encodings
+#         ):
+#             # Check if the face matches any known faces
+#             matches = face_recognition.compare_faces(
+#                 list(known_people.values()), face_encoding
+#             )
+#             name = "Stranger"
 
-        # Find all face locations and face encodings in the current frame
-        face_locations = face_recognition.face_locations(frame)
-        face_encodings = face_recognition.face_encodings(frame, face_locations)
+#             for idx, match in enumerate(matches):
+#                 if match:
+#                     name = list(known_people.keys())[idx]
+#                     # Speak "face recognized" when a known face is recognized
+#                     speech_engine.say("Face recognized")
+#                     speech_engine.runAndWait()
+#                     # Turn the box green
+#                     cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+#                     cv2.putText(
+#                         frame,
+#                         "Approved",
+#                         (left, bottom + 30),
+#                         cv2.FONT_HERSHEY_SIMPLEX,
+#                         0.5,
+#                         (0, 255, 0),
+#                         1,
+#                     )
+#                     cv2.waitKey(3000)
+#                     video_capture.release()
+#                     cv2.destroyAllWindows()
+#                     return
 
-        # Loop through each face found in the frame
-        for (top, right, bottom, left), face_encoding in zip(
-            face_locations, face_encodings
-        ):
-            # Check if the face matches any known faces
-            matches = face_recognition.compare_faces(
-                list(known_people.values()), face_encoding
-            )
-            name = "Stranger"
+#             # Draw a rectangle around the face in red
+#             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+#             cv2.putText(
+#                 frame,
+#                 name,
+#                 (left, bottom + 30),
+#                 cv2.FONT_HERSHEY_SIMPLEX,
+#                 0.5,
+#                 (0, 0, 255),
+#                 1,
+#             )
 
-            for idx, match in enumerate(matches):
-                if match:
-                    name = list(known_people.keys())[idx]
-                    # Speak "face recognized" when a known face is recognized
-                    speech_engine.say("Face recognized")
-                    speech_engine.runAndWait()
-                    # Turn the box green
-                    cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-                    cv2.putText(
-                        frame,
-                        "Approved",
-                        (left, bottom + 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        (0, 255, 0),
-                        1,
-                    )
-                    cv2.waitKey(3000)
-                    video_capture.release()
-                    cv2.destroyAllWindows()
-                    return
+#         # Display the resulting frame
+#         cv2.imshow("Video", frame)
 
-            # Draw a rectangle around the face in red
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-            cv2.putText(
-                frame,
-                name,
-                (left, bottom + 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 255),
-                1,
-            )
+#         # Break the loop if 'q' is pressed
+#         if cv2.waitKey(30) & 0xFF == ord("q"):
+#             break
 
-        # Display the resulting frame
-        cv2.imshow("Video", frame)
-
-        # Break the loop if 'q' is pressed
-        if cv2.waitKey(30) & 0xFF == ord("q"):
-            break
-
-    video_capture.release()
-    cv2.destroyAllWindows()
-
-
-# recognize_faces()
+#     video_capture.release()
+#     cv2.destroyAllWindows()
 
 
 def record_screen_with_voice_commands(output_path, fps=60):
@@ -608,9 +623,7 @@ def record_screen_with_voice_commands(output_path, fps=60):
         time.sleep(1)  # Add a delay to avoid high CPU usage
 
 
-# Example usage
 output_path = "screen_recording.mp4"
-# record_screen_with_voice_commands(output_path, fps=60)
 
 
 def greet_user():
@@ -625,11 +638,12 @@ def greet_user():
         Speak(f"Good Evening {USERNAME}")
     else:
         Speak("i hope you're enjoying the night ")
+    Speak("thank you for inviting us to techno international")
+    # Speak("i hope you are a seedhae maut fan")
     Speak(f"I am {BOTNAME}. How may I assist you?")
 
 
-Speak("hello sir , welcome back to your room")
-# greet_user()
+greet_user()
 
 
 def execution(query):
@@ -639,17 +653,16 @@ def execution(query):
     elif "screenshot" in Query:
         Speak("sure sir")
         take_screenshot()
-    elif "VLC" in Query:
-        os.startfile(
-            "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\VideoLAN\VLC media player.lnk"
-        )  # Adjust this path accordingly
 
-        Speak("opening VLC")
     elif "mouse control" in Query:
         Speak("you now have full control over your mouse")
+        from mouse import run_gesture_controller
+
         run_gesture_controller()
     elif "keyboard control" in Query:
         Speak("you now have full control over your keyboard")
+        from key import mainkey
+
         mainkey()
     elif (
         "adjust the volume" in Query
@@ -692,11 +705,11 @@ def execution(query):
         search_youtube(query)
         webbrowser.open(search_youtube(query))
 
-    elif "after effects" in Query:
-        Speak("ok sir, i will hold on")
-        os.startfile(
-            "C:\\Program Files\\Adobe\\Adobe After Effects 2022\\Support Files\\AfterFX.exe"
-        )
+    # elif "after effects" in Query:
+    #     Speak("ok sir, i will hold on")
+    #     os.startfile(
+    #         "C:\\Program Files\\Adobe\\Adobe After Effects 2022\\Support Files\\AfterFX.exe"
+    #     )
     else:
         try:
             assistant_response = generate_chat_response(Query)
