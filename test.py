@@ -4,7 +4,6 @@ import datetime
 import os
 import subprocess as sp
 import openai
-
 import pywhatkit as kit
 import time
 from datetime import datetime
@@ -12,7 +11,6 @@ import threading
 from googleapiclient.discovery import build
 import webbrowser
 import cv2
-import face_recognition
 import numpy as np
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
@@ -20,17 +18,19 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 import pyautogui
 from PIL import Image
 import psutil
-import pyperclip
-
-# from mouse import run_gesture_controller
-# from key import mainkey
+import threading
 
 API_KEY = "AIzaSyBKU7o_xaRSHmYG7x5oWVz1GtnsOwU1sJ0"
-# mainclapexe()
 
 USERNAME = "JUDGES"
 BOTNAME = "OSKEE"
 openai.api_key = "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"
+
+listening = True
+
+from testface import face_recognition_with_animation
+
+face_recognition_with_animation("C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg")
 
 
 def Speak(text):
@@ -69,133 +69,6 @@ def speechrecognition():
     except sr.RequestError as e:
         print(f"Could not request results; {e}")
         return ""
-
-
-# Call the function
-# speechrecognition()
-
-
-def object_detection():
-    # Load the YOLO object detection model
-    net = cv2.dnn.readNet(
-        "C:\\Users\\asus\\Desktop\\IP\\yolov3.weights",
-        "C:\\Users\\asus\\Desktop\\IP\\yolov3.cfg",
-    )
-
-    # Load the classes file
-    with open("C:\\Users\\asus\\Desktop\\OSKI\\od\\coco.names", "r") as f:
-        classes = [line.strip() for line in f.readlines()]
-
-    # Define the layer names for the output layers of the YOLO model
-    layer_names = ["yolo_82", "yolo_94", "yolo_106"]
-
-    # Specify the minimum confidence required to filter out weak predictions
-    min_confidence = 0.5
-
-    # Load the video capture object
-    video_capture = cv2.VideoCapture(0)
-
-    # Initialize the text-to-speech engine
-    engine = pyttsx3.init()
-
-    # Initialize the speech recognition engine
-    recognizer = sr.Recognizer()
-
-    exit_requested = False
-
-    while not exit_requested:
-        # Grab a frame from the video capture object
-        ret, frame = video_capture.read()
-
-        # Only proceed if the frame was successfully grabbed
-        if not ret:
-            break
-
-        # Get the height and width of the frame
-        height, width = frame.shape[:2]
-
-        # Construct a blob from the frame and perform a forward pass with the YOLO model
-        blob = cv2.dnn.blobFromImage(
-            frame, 1 / 255.0, (416, 416), swapRB=True, crop=False
-        )
-        net.setInput(blob)
-        layer_outputs = net.forward(layer_names)
-
-        # Initialize lists to store the bounding box coordinates, confidences, and class IDs
-        boxes = []
-        confidences = []
-        class_ids = []
-
-        # Loop over each of the layer outputs
-        for output in layer_outputs:
-            # Loop over each of the detections in the layer output
-            for detection in output:
-                # Extract the class ID and confidence from the detection
-                scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
-
-                # Only consider detections with a confidence greater than the minimum confidence
-                if confidence > min_confidence:
-                    # Scale the bounding box coordinates back relative to the size of the frame
-                    box = detection[0:4] * np.array([width, height, width, height])
-                    center_x, center_y, w, h = box.astype("int")
-
-                    # Calculate the top-left corner of the bounding box
-                    x = int(center_x - w / 2)
-                    y = int(center_y - h / 2)
-
-                    # Append the bounding box, confidence, and class ID to their respective lists
-                    boxes.append([x, y, w, h])
-                    confidences.append(float(confidence))
-                    class_ids.append(class_id)
-
-        # Apply non-maximum suppression to remove redundant overlapping boxes
-        indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
-
-        # Convert the tuple to a list
-        indices = list(indices)
-
-        # Loop over the remaining indices after non-maximum suppression
-        for i in indices:
-            box = boxes[i]
-            x, y, w, h = box
-
-            # Draw the bounding box and label on the frame
-            color = (0, 255, 0)  # BGR color format
-            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-            label = f"{classes[class_ids[i]]}: {confidences[i]:.2f}"
-
-            # Speak the name of the detected object
-            engine.say(f"it is a {classes[class_ids[i]]}")
-            engine.runAndWait()
-
-        # Display the resulting frame
-        cv2.imshow("Object Detection", frame)
-
-        with sr.Microphone() as source:
-            recognizer.adjust_for_ambient_noise(source, duration=1)
-            audio = recognizer.listen(source, timeout=5)
-            try:
-                command = recognizer.recognize_google(audio).lower()
-            except sr.UnknownValueError:
-                command = None
-            except sr.RequestError as e:
-                print(
-                    f"Could not request results from Google Speech Recognition service; {e}"
-                )
-                command = "..."
-
-        print(f"Command: {command}")
-
-        if command and "exit" in command:
-            Speak("exiting object detection")
-            exit_requested = True
-
-    # Release the video capture object and close the window
-
-    video_capture.release()
-    cv2.destroyAllWindows()
 
 
 def get_volume_control():
@@ -343,85 +216,6 @@ def get_current_date_time():
     return current_date_time
 
 
-def listen_for_command():
-    recognizer = sr.Recognizer()
-
-    with sr.Microphone() as source:
-        print("Listening for a command...")
-        recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source, timeout=10)
-
-    try:
-        command = recognizer.recognize_google(audio).lower()
-        print("You said:", command)
-        return command
-    except sr.UnknownValueError:
-        print("Sorry, could not understand the audio.")
-        return None
-    except sr.RequestError as e:
-        print(f"Could not request results from Google Speech Recognition service; {e}")
-        return None
-
-
-def listen_for_content(timeout=5):
-    recognizer = sr.Recognizer()
-
-    with sr.Microphone() as source:
-        print("Listening for content...")
-        recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source, timeout=timeout)
-
-    try:
-        content = recognizer.recognize_google(audio).lower()
-        print("You are writing:", content)
-        return content
-    except sr.UnknownValueError:
-        print("No speech detected.")
-        return None
-    except sr.RequestError as e:
-        print(f"Could not request results from Google Speech Recognition service; {e}")
-        return None
-
-
-def close_notepad_window():
-    try:
-        # Simulate Alt + F4 keyboard shortcut to close the active window
-        pyautogui.hotkey("alt", "f4")
-    except Exception as e:
-        print(f"Error closing Notepad window: {e}")
-
-
-def write_and_close_notepad(content):
-    notepad_path = r"C:\Windows\System32\notepad.exe"
-    process = sr.open([notepad_path, "text.txt"])
-
-    with open("text.txt", "w") as file:
-        file.write(content)
-
-    time.sleep(1)  # Give some time for Notepad to open and update
-
-    pyperclip.copy(content)  # Copy the content to clipboard
-
-    close_notepad_window()  # Close the Notepad window
-
-    print("Content written to Notepad and copied to clipboard.")
-
-
-# main notepad automation function
-def notepad():
-    while True:
-        command = listen_for_command()
-
-        if command == "start writing":
-            print("What would you like to write?")
-            content_to_write = listen_for_content(timeout=5)
-
-            if content_to_write:
-                write_and_close_notepad(content_to_write)
-        elif command == "exit":
-            break
-
-
 current_date_time = get_current_date_time()
 
 
@@ -481,90 +275,6 @@ def take_picture(main_speech_recognition):
     Speak(
         "Picture taken and saved as yourface.jpg and stored in camera roll. By the way, you look very handsome today"
     )
-
-
-# def recognize_faces():
-#     Speak("please be in front of the camera sir ")
-#     known_people = {
-#         "Ayaan": face_recognition.face_encodings(
-#             face_recognition.load_image_file(
-#                 "C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg"
-#             )
-#         )[0],
-#         "nikhil": face_recognition.face_encodings(
-#             face_recognition.load_image_file(
-#                 "C:\\Users\\asus\\Desktop\\OSKI\\images\\pho2.jpg"
-#             )
-#         )[0],
-#         # Add more people as needed
-#     }
-
-#     video_capture = cv2.VideoCapture(0)
-#     cv2.namedWindow("Video", cv2.WINDOW_NORMAL)
-#     cv2.resizeWindow("Video", 800, 600)
-#     speech_engine = pyttsx3.init()
-
-#     while True:
-#         # Capture each frame
-#         _, frame = video_capture.read()
-
-#         # Find all face locations and face encodings in the current frame
-#         face_locations = face_recognition.face_locations(frame)
-#         face_encodings = face_recognition.face_encodings(frame, face_locations)
-
-#         # Loop through each face found in the frame
-#         for (top, right, bottom, left), face_encoding in zip(
-#             face_locations, face_encodings
-#         ):
-#             # Check if the face matches any known faces
-#             matches = face_recognition.compare_faces(
-#                 list(known_people.values()), face_encoding
-#             )
-#             name = "Stranger"
-
-#             for idx, match in enumerate(matches):
-#                 if match:
-#                     name = list(known_people.keys())[idx]
-#                     # Speak "face recognized" when a known face is recognized
-#                     speech_engine.say("Face recognized")
-#                     speech_engine.runAndWait()
-#                     # Turn the box green
-#                     cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-#                     cv2.putText(
-#                         frame,
-#                         "Approved",
-#                         (left, bottom + 30),
-#                         cv2.FONT_HERSHEY_SIMPLEX,
-#                         0.5,
-#                         (0, 255, 0),
-#                         1,
-#                     )
-#                     cv2.waitKey(3000)
-#                     video_capture.release()
-#                     cv2.destroyAllWindows()
-#                     return
-
-#             # Draw a rectangle around the face in red
-#             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-#             cv2.putText(
-#                 frame,
-#                 name,
-#                 (left, bottom + 30),
-#                 cv2.FONT_HERSHEY_SIMPLEX,
-#                 0.5,
-#                 (0, 0, 255),
-#                 1,
-#             )
-
-#         # Display the resulting frame
-#         cv2.imshow("Video", frame)
-
-#         # Break the loop if 'q' is pressed
-#         if cv2.waitKey(30) & 0xFF == ord("q"):
-#             break
-
-#     video_capture.release()
-#     cv2.destroyAllWindows()
 
 
 def record_screen_with_voice_commands(output_path, fps=60):
@@ -643,13 +353,30 @@ def greet_user():
     Speak(f"I am {BOTNAME}. How may I assist you?")
 
 
-greet_user()
-
-
 def execution(query):
     Query = str(query).lower()
     if "hello" in Query:
         Speak("Hello Ayaan, welcome back")
+    elif (
+        "what are the things you can do" in Query or "menu" in Query or "help" in Query
+    ):
+        print("Here is what I can do:")
+        print("1. YOUTUBE")
+        print("2. GOOGLE SEARCH")
+        print("3. MOUSE CONTROL")
+        print("4. KEYBOARD CONTROL")
+        print("5. TAKE YOUR PICTURE")
+        print("6. TAKE A SCREENSHOT:")
+        print("7. SCREEN RECORDING:")
+        Speak("Here is what I can do:")
+        Speak("1. YOUTUBE")
+        Speak("2. GOOGLE SEARCH")
+        Speak("3. MOUSE CONTROL")
+        Speak("4. KEYBOARD CONTROL")
+        Speak("5. TAKE YOUR PICTURE")
+        Speak("6. TAKE A SCREENSHOT:")
+        Speak("7. SCREEN RECORDING:")
+        Speak("You can ask me anything from these options.")
     elif "screenshot" in Query:
         Speak("sure sir")
         take_screenshot()
@@ -673,17 +400,13 @@ def execution(query):
     elif "screen recording" in Query:
         Speak("ok sir , tell me when to start and when to stop.")
         record_screen_with_voice_commands(output_path, fps=60)
-    elif "object detection" in Query:
-        Speak("sure sir , opening object detection, i might me inaccurate sir.")
-        object_detection()
+
     elif "bye" in Query:
         Speak("Goodbye Ayaan, have a nice life")
         exit()
     elif "time" in Query:
         time = datetime.now().strftime("%H:%M")
         Speak(f"It's {time} sir")
-    elif "start writing" in Query:
-        notepad()
 
     elif "take a picture" in Query:
         Speak("sure sir. Make sure to put on a big smile ")
@@ -705,11 +428,6 @@ def execution(query):
         search_youtube(query)
         webbrowser.open(search_youtube(query))
 
-    # elif "after effects" in Query:
-    #     Speak("ok sir, i will hold on")
-    #     os.startfile(
-    #         "C:\\Program Files\\Adobe\\Adobe After Effects 2022\\Support Files\\AfterFX.exe"
-    #     )
     else:
         try:
             assistant_response = generate_chat_response(Query)
