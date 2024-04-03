@@ -427,6 +427,14 @@ def greet_user():
 greet_user()
 
 
+def killchrome():
+    os.system("taskkill /F /IM chrome.exe")
+
+
+def killbrave():
+    os.system("taskkill /F /IM brave.exe")
+
+
 def find_my_ip():
     ip_address = requests.get("https://api64.ipify.org?format=json").json()
     return ip_address["ip"]
@@ -485,7 +493,10 @@ def execution(query):
     elif "screen recording" in Query:
         Speak("ok sir , tell me when to start and when to stop.")
         record_screen_with_voice_commands(output_path, fps=60)
-
+    elif "kill chrome" in Query:
+        killchrome()
+    elif "kill brave" in Query:
+        killbrave()
     elif "bye" in Query:
         Speak("Goodbye Ayaan, have a nice life")
         exit()
