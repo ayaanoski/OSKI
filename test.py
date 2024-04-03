@@ -19,10 +19,12 @@ import pyautogui
 from PIL import Image
 import psutil
 import threading
+import requests
 
 API_KEY = "AIzaSyBKU7o_xaRSHmYG7x5oWVz1GtnsOwU1sJ0"
-
-USERNAME = "JUDGES"
+NEWS_API_KEY = "44579792a5254931ad30db4faf675139"
+OPENWEATHER_APP_ID = "ff8f8b135e0f8ac86cbdd41570b4838b"
+USERNAME = "TEAM OSKEE"
 BOTNAME = "OSKEE"
 openai.api_key = "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"
 
@@ -69,6 +71,47 @@ def speechrecognition():
     except sr.RequestError as e:
         print(f"Could not request results; {e}")
         return ""
+
+
+def get_latest_news():
+    news_headlines = []
+    res = requests.get(
+        f"https://newsapi.org/v2/top-headlines?country=in&apiKey={NEWS_API_KEY}&category=general"
+    ).json()
+    articles = res["articles"]
+    for article in articles:
+        news_headlines.append(article["title"])
+    return news_headlines[:5]
+
+
+def get_weather_report(city):
+    # Your code to fetch weather data from the API
+    api_key = "ff8f8b135e0f8ac86cbdd41570b4838b"
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        if (
+            "weather" in data
+            and isinstance(data["weather"], list)
+            and len(data["weather"]) > 0
+        ):
+            weather = data["weather"][0]["main"]
+        else:
+            weather = "Unavailable"
+
+        if "main" in data:
+            temperature = data["main"].get("temp")
+            feels_like = data["main"].get("feels_like")
+        else:
+            temperature = "Unavailable"
+            feels_like = "Unavailable"
+
+        return weather, temperature, feels_like
+    else:
+        print("Failed to fetch weather data.")
+        return None, None, None
 
 
 def get_volume_control():
@@ -337,8 +380,6 @@ output_path = "screen_recording.mp4"
 
 
 def greet_user():
-    """Greets the user according to the time"""
-
     hour = datetime.now().hour
     if (hour >= 6) and (hour < 12):
         Speak(f"Good Morning {USERNAME}")
@@ -347,10 +388,16 @@ def greet_user():
     elif (hour >= 16) and (hour < 6):
         Speak(f"Good Evening {USERNAME}")
     else:
-        Speak("i hope you're enjoying the night ")
-    Speak("thank you for inviting us to techno international")
-    # Speak("i hope you are a seedhae maut fan")
-    Speak(f"I am {BOTNAME}. How may I assist you?")
+        Speak("i hope you guys are enjoying the night")
+    Speak(f"I am {BOTNAME}. How may I assist you guys?")
+
+
+greet_user()
+
+
+def find_my_ip():
+    ip_address = requests.get("https://api64.ipify.org?format=json").json()
+    return ip_address["ip"]
 
 
 def execution(query):
@@ -368,6 +415,9 @@ def execution(query):
         print("5. TAKE YOUR PICTURE")
         print("6. TAKE A SCREENSHOT:")
         print("7. SCREEN RECORDING:")
+        print("8. WEATHER REPORT")
+        print("9. LATEST NEWS REPORT")
+        print("10. TOP TRENDING MOVIE LIST")
         Speak("Here is what I can do:")
         Speak("1. YOUTUBE")
         Speak("2. GOOGLE SEARCH")
@@ -376,7 +426,10 @@ def execution(query):
         Speak("5. TAKE YOUR PICTURE")
         Speak("6. TAKE A SCREENSHOT:")
         Speak("7. SCREEN RECORDING:")
+        Speak("9. LATEST NEWS REPORT")
+        Speak("10. TOP TRENDING MOVIE LIST")
         Speak("You can ask me anything from these options.")
+
     elif "screenshot" in Query:
         Speak("sure sir")
         take_screenshot()
@@ -415,9 +468,32 @@ def execution(query):
     elif "cmd" in Query:
         Speak("Sure sir, opening command prompt")
         os.system("start cmd")
+    elif "news" in query:
+        Speak(f"I'm reading out the latest news headlines, sir")
+        Speak(get_latest_news())
+        Speak("For your convenience, I am printing it on the screen sir.")
+        print(*get_latest_news(), sep="\n")
+
+    elif "weather" in query:
+        ip_address = find_my_ip()
+        city = requests.get(f"https://ipapi.co/{ip_address}/city/").text
+        Speak(f"Getting weather report for your city {city}")
+        weather, temperature, feels_like = get_weather_report(city)
+        if weather is not None and temperature is not None and feels_like is not None:
+            Speak(
+                f"The current temperature is {temperature}, but it feels like {feels_like}"
+            )
+            Speak(f"Also, the weather report talks about {weather}")
+            Speak("For your convenience, I am printing it on the screen sir.")
+            print(
+                f"Description: {weather}\nTemperature: {temperature}\nFeels like: {feels_like}"
+            )
+        else:
+            Speak("Sorry, unable to fetch weather data at the moment.")
 
     elif "what is your name" in Query or "tumhara naam kya hai" in Query:
         Speak("my name is oskee , and i am created by ayaan")
+
     elif "google" in Query:
         Speak("what do you want to search on google, sir?")
         query = speechrecognition().lower()
