@@ -32,7 +32,7 @@ listening = True
 
 from testface import face_recognition_with_animation
 
-face_recognition_with_animation("C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg")
+# face_recognition_with_animation("C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg")
 
 
 def Speak(text):
@@ -84,34 +84,64 @@ def get_latest_news():
     return news_headlines[:5]
 
 
-def get_weather_report(city):
-    # Your code to fetch weather data from the API
-    api_key = "ff8f8b135e0f8ac86cbdd41570b4838b"
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}"
-    response = requests.get(url)
+def get_city_name():
+    engine = pyttsx3.init()
+    # Function to listen for city name using voice input
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        engine.say("Please say the name of the city.")
+        engine.runAndWait()
+        print("Listening...")
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source)
 
-    if response.status_code == 200:
-        data = response.json()
-        if (
-            "weather" in data
-            and isinstance(data["weather"], list)
-            and len(data["weather"]) > 0
-        ):
-            weather = data["weather"][0]["main"]
+    try:
+        city_name = recognizer.recognize_google(audio)
+        print(f"You said: {city_name}")
+        return city_name
+    except sr.UnknownValueError:
+        engine.say("Sorry, I couldn't understand. Please try again.")
+        engine.runAndWait()
+        return get_city_name()
+    except sr.RequestError:
+        engine.say("Sorry, there was an issue with the speech recognition service.")
+        engine.runAndWait()
+        return None
+
+
+def showWeather():
+    engine = pyttsx3.init()
+    api_key = "e59c8e0cb247887c47ca4bb19f28345c"
+
+    # Get city name using voice input
+    city_name = get_city_name()
+
+    if city_name:
+        weather_url = (
+            "http://api.openweathermap.org/data/2.5/weather?q="
+            + city_name
+            + "&appid="
+            + api_key
+        )
+        Response = requests.get(weather_url)
+        Weather_Info = Response.json()
+
+        if Weather_Info["cod"] == 200:
+            kelvin = 273
+            temp = int(Weather_Info["main"]["temp"] - kelvin)
+            pressure = Weather_Info["main"]["pressure"]
+            humidity = Weather_Info["main"]["humidity"]
+            sunrise = Weather_Info["sys"]["sunrise"]
+            sunset = Weather_Info["sys"]["sunset"]
+            timezone = Weather_Info["timezone"]
+            cloudy = Weather_Info["clouds"]["all"]
+            description = Weather_Info["weather"][0]["description"]
+            weather_data = f"\nWeather of: {city_name}\nTemperature (Celsius): {temp}\nPressure: {pressure}\nHumidity: {humidity}"
+            engine.runAndWait()
         else:
-            weather = "Unavailable"
-
-        if "main" in data:
-            temperature = data["main"].get("temp")
-            feels_like = data["main"].get("feels_like")
-        else:
-            temperature = "Unavailable"
-            feels_like = "Unavailable"
-
-        return weather, temperature, feels_like
-    else:
-        print("Failed to fetch weather data.")
-        return None, None, None
+            weather_data = f"\n\tWeather for '{city_name}' is not found!\n\tPlease Enter Valid City Name "
+            engine.say(weather_data)
+            engine.runAndWait()
 
 
 def get_volume_control():
@@ -475,21 +505,7 @@ def execution(query):
         print(*get_latest_news(), sep="\n")
 
     elif "weather" in query:
-        ip_address = find_my_ip()
-        city = requests.get(f"https://ipapi.co/{ip_address}/city/").text
-        Speak(f"Getting weather report for your city {city}")
-        weather, temperature, feels_like = get_weather_report(city)
-        if weather is not None and temperature is not None and feels_like is not None:
-            Speak(
-                f"The current temperature is {temperature}, but it feels like {feels_like}"
-            )
-            Speak(f"Also, the weather report talks about {weather}")
-            Speak("For your convenience, I am printing it on the screen sir.")
-            print(
-                f"Description: {weather}\nTemperature: {temperature}\nFeels like: {feels_like}"
-            )
-        else:
-            Speak("Sorry, unable to fetch weather data at the moment.")
+        showWeather()
 
     elif "what is your name" in Query or "tumhara naam kya hai" in Query:
         Speak("my name is oskee , and i am created by ayaan")
