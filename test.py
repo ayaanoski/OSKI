@@ -21,6 +21,7 @@ import psutil
 import threading
 import requests
 
+
 API_KEY = "AIzaSyBKU7o_xaRSHmYG7x5oWVz1GtnsOwU1sJ0"
 NEWS_API_KEY = "44579792a5254931ad30db4faf675139"
 OPENWEATHER_APP_ID = "ff8f8b135e0f8ac86cbdd41570b4838b"
@@ -84,8 +85,12 @@ def get_latest_news():
     return news_headlines[:5]
 
 
+import requests
+
+engine = pyttsx3.init()
+
+
 def get_city_name():
-    engine = pyttsx3.init()
     # Function to listen for city name using voice input
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
@@ -110,7 +115,6 @@ def get_city_name():
 
 
 def showWeather():
-    engine = pyttsx3.init()
     api_key = "e59c8e0cb247887c47ca4bb19f28345c"
 
     # Get city name using voice input
@@ -131,12 +135,10 @@ def showWeather():
             temp = int(Weather_Info["main"]["temp"] - kelvin)
             pressure = Weather_Info["main"]["pressure"]
             humidity = Weather_Info["main"]["humidity"]
-            sunrise = Weather_Info["sys"]["sunrise"]
-            sunset = Weather_Info["sys"]["sunset"]
-            timezone = Weather_Info["timezone"]
-            cloudy = Weather_Info["clouds"]["all"]
+
             description = Weather_Info["weather"][0]["description"]
-            weather_data = f"\nWeather of: {city_name}\nTemperature (Celsius): {temp}\nPressure: {pressure}\nHumidity: {humidity}"
+            weather_data = f"\nWeather of: {city_name}\nTemperature (Celsius): {temp}\nPressure: {pressure}\nHumidity: {humidity}\n{description}"
+            engine.say(weather_data)
             engine.runAndWait()
         else:
             weather_data = f"\n\tWeather for '{city_name}' is not found!\n\tPlease Enter Valid City Name "
