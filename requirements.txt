@@ -1,0 +1,39 @@
+pyttsx3==2.90
+speechrecognition==3.8.1
+openai==0.11.2
+pywhatkit==5.1
+google-api-python-client==2.23.0
+opencv-python==4.5.4.60
+comtypes==1.1.10
+pycaw==20181226
+pyautogui==0.9.53
+Pillow==9.0.1
+psutil==5.8.0
+requests==2.26.0
+# the versions
+
+
+import pyttsx3
+import speech_recognition as sr
+import datetime
+import os
+import subprocess as sp
+import openai
+import pywhatkit as kit
+import time
+from datetime import datetime
+import threading
+from googleapiclient.discovery import build
+import webbrowser
+import cv2
+import numpy as np
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+import pyautogui
+from PIL import Image
+import psutil
+import requests
+
+# Check for any missed imports
+
