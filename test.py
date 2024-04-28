@@ -33,7 +33,7 @@ listening = True
 
 from testface import face_recognition_with_animation
 
-face_recognition_with_animation("C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg")
+# face_recognition_with_animation("C:\\Users\\asus\\Desktop\\OSKI\\images\\pho.jpg")
 
 
 def Speak(text):
@@ -540,7 +540,7 @@ def object_detection_with_voice(duration=5):
 
             # Speak detected objects and motion detection result
             if motion_detected:
-                engine.say("Motion detected.")
+                engine.say("    ")
                 motion_detected = False  # Reset motion detection flag after speaking
             if detected_objects_str:
                 engine.say(f"I can see a {detected_objects_str}.")
@@ -589,6 +589,7 @@ def execution(query):
         print("7. SCREEN RECORDING:")
         print("8. WEATHER REPORT")
         print("9. LATEST NEWS REPORT")
+        print("10. OBJECT DETECTION")
 
         Speak("Here is what I can do:")
         Speak("1. YOUTUBE")
@@ -599,7 +600,7 @@ def execution(query):
         Speak("6. TAKE A SCREENSHOT:")
         Speak("7. SCREEN RECORDING:")
         Speak("9. LATEST NEWS REPORT")
-
+        Speak("10. OBJECT DETECTION")
         Speak("You can ask me anything from these options.")
 
     elif "screenshot" in Query:
@@ -611,6 +612,7 @@ def execution(query):
         from mouse import run_gesture_controller
 
         run_gesture_controller()
+
     elif "keyboard control" in Query:
         Speak("you now have full control over your keyboard")
         from key import mainkey
@@ -622,12 +624,19 @@ def execution(query):
         or "decrease the volume" in Query
     ):
         adjust_volume_by_voice()
+    elif "notepad" in Query:
+        from note import start_writing
+
+        Speak("opening notepad")
+        start_writing()
+        Speak("closing notepad, the text has been copied to your clipboard")
+
     elif "screen recording" in Query:
         Speak("ok sir , tell me when to start and when to stop.")
         record_screen_with_voice_commands(output_path, fps=60)
-    elif "kill chrome" in Query:
+    elif "close chrome" in Query:
         killchrome()
-    elif "kill brave" in Query:
+    elif "close brave" in Query:
         killbrave()
     elif "bye" in Query:
         Speak("Goodbye Ayaan, have a nice life")
