@@ -20,6 +20,8 @@ from PIL import Image
 import psutil
 import threading
 import requests
+import subprocess
+import pyperclip
 
 
 API_KEY = "AIzaSyBKU7o_xaRSHmYG7x5oWVz1GtnsOwU1sJ0"
@@ -67,7 +69,7 @@ def speechrecognition():
         print(f"You said: {query}")
         return query
     except sr.UnknownValueError:
-        print("Sorry, could not understand audio.")
+        Speak("Sorry, could not understand audio.")
         return ""
     except sr.RequestError as e:
         print(f"Could not request results; {e}")
@@ -572,6 +574,132 @@ def object_detection_with_voice(duration=5):
     cv2.destroyAllWindows()
 
 
+def get_duration_from_text(text):
+    # Convert text duration to seconds
+    if "second" in text:
+        return int(text.split()[0])
+    elif "minute" in text:
+        return int(text.split()[0]) * 60
+    elif "hour" in text:
+        return int(text.split()[0]) * 3600
+    else:
+        return None
+
+
+def set_reminder():
+    # Initialize the speech recognizer
+    recognizer = sr.Recognizer()
+
+    # Get reminder label
+    with sr.Microphone() as source:
+        print("Please say the reminder label:")
+        recognizer.adjust_for_ambient_noise(source)
+        label_audio = recognizer.listen(source)
+
+    reminder_label = recognizer.recognize_google(label_audio)
+
+    # Get duration
+    with sr.Microphone() as source:
+        print(
+            "Please say the duration for the reminder (e.g., '30 seconds' or '10 minutes'):"
+        )
+        recognizer.adjust_for_ambient_noise(source)
+        duration_audio = recognizer.listen(source)
+
+    duration_text = recognizer.recognize_google(duration_audio)
+    duration_seconds = get_duration_from_text(duration_text)
+
+    if duration_seconds is None:
+        print("Invalid duration format. Please try again.")
+        return
+
+    # Print reminder details
+    print(f"Reminder set: '{reminder_label}' after {duration_text}.")
+
+    # Wait for the specified duration
+    time.sleep(duration_seconds)
+
+    # Initialize the text-to-speech engine
+    engine = pyttsx3.init()
+
+    # Set properties (optional)
+    engine.setProperty("rate", 150)  # Speed percent (can go over 100)
+    engine.setProperty("volume", 0.9)  # Volume 0-1
+
+    # Convert text to speech and remind
+    Speak("sorry to interrupt you , but i was told to remind you to " + reminder_label)
+    engine.runAndWait()
+
+
+def type_text(text):
+    pyperclip.copy(text)
+    pyautogui.hotkey("ctrl", "v")
+
+
+def start_writing():
+    # Open Notepad
+    os.system("start notepad")
+    pyautogui.sleep(1)
+
+    # Listen to the microphone
+    recognizer = sr.Recognizer()
+    microphone = sr.Microphone()
+
+    text = ""  # Store the entire conversation
+
+    with microphone as source:
+        print("Listening...")
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source)
+
+        try:
+            text = recognizer.recognize_google(audio)
+            type_text(text)  # Type the initial text
+            while True:
+                print("Listening...")
+                audio = recognizer.listen(source)
+                text = recognizer.recognize_google(audio)
+                if "stop writing" in text.lower():
+                    break
+                elif "clear" in text.lower():
+                    clear_notepad()
+
+                else:
+                    type_text(text)
+        except sr.UnknownValueError:
+            print("Could not understand audio")
+        except sr.RequestError as e:
+            print("Error; {0}".format(e))
+
+    # Save text to clipboard and file
+    time.sleep(1)  # Wait for the text to appear in Notepad
+    pyautogui.hotkey("ctrl", "a")  # Select all text in Notepad
+    pyautogui.hotkey("ctrl", "c")  # Copy selected text to clipboard
+
+    clipboard_text = pyperclip.paste()
+
+    with open("speech_to_text.txt", "w") as file:
+        file.write(clipboard_text)
+
+    print("Text saved to clipboard and file.")
+
+    kill_notepad()
+
+
+def clear_notepad():
+    pyautogui.hotkey("ctrl", "a")  # Select all text in Notepad
+    pyautogui.press("delete")  # Delete selected text
+    print("Notepad content cleared.")
+
+
+def kill_notepad():
+    try:
+        subprocess.run(["taskkill", "/f", "/im", "notepad.exe"], check=True)
+        print("Notepad terminated successfully.")
+    except subprocess.CalledProcessError:
+        print("Failed to terminate Notepad.")
+
+
 def execution(query):
     Query = str(query).lower()
     if "hello" in Query:
@@ -590,6 +718,8 @@ def execution(query):
         print("8. WEATHER REPORT")
         print("9. LATEST NEWS REPORT")
         print("10. OBJECT DETECTION")
+        print("11. TO SET A REMINDER")
+        print("12. to note down things")
 
         Speak("Here is what I can do:")
         Speak("1. YOUTUBE")
@@ -601,6 +731,7 @@ def execution(query):
         Speak("7. SCREEN RECORDING:")
         Speak("9. LATEST NEWS REPORT")
         Speak("10. OBJECT DETECTION")
+        Speak("11. TO SET A REMINDER")
         Speak("You can ask me anything from these options.")
 
     elif "screenshot" in Query:
@@ -625,8 +756,6 @@ def execution(query):
     ):
         adjust_volume_by_voice()
     elif "notepad" in Query:
-        from note import start_writing
-
         Speak("opening notepad")
         start_writing()
         Speak("closing notepad, the text has been copied to your clipboard")
@@ -644,7 +773,9 @@ def execution(query):
     elif "time" in Query:
         time = datetime.now().strftime("%H:%M")
         Speak(f"It's {time} sir")
-
+    elif "reminder" in Query:
+        Speak("sure thing, tell me the label and the duration for reminder")
+        set_reminder()
     elif "take a picture" in Query:
         Speak("sure sir. Make sure to put on a big smile ")
         take_picture(speechrecognition)
